@@ -1,7 +1,9 @@
 package jsondsl
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"unicode"
 	"unicode/utf8"
 )
@@ -182,4 +184,29 @@ func (t *Tokenizer) SplitFunc(data []byte, atEOF bool) (advance int, token []byt
 	}
 
 	return 0, nil, fmt.Errorf("unexpected byte %q at start of token", data[advance])
+}
+
+type tokenReader struct {
+	t  *Tokenizer
+	sc *bufio.Scanner
+}
+
+type tokenPos struct {
+	Text string
+	Token
+	Pos
+}
+
+func (r *tokenReader) Read(p []tokenPos) (n int, err error) {
+	for i := range p {
+		if !r.sc.Scan() {
+			if err := r.sc.Err(); err != nil {
+				return n, err
+			}
+			return n, io.EOF // The caller might change this to UnexpectedEOF.
+		}
+		p[i] = tokenPos{Text: r.sc.Text(), Token: r.t.Token(), Pos: r.t.Pos()}
+		n++
+	}
+	return n, nil
 }

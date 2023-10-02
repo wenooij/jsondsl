@@ -13,6 +13,17 @@ type parser struct {
 	*bufiog.Reader[tokenPos]
 }
 
+func (p *parser) consumeToken(t Token) (Pos, error) {
+	e, err := p.ReadElem()
+	if err != nil {
+		return NoPos, err
+	}
+	if e.Token != t {
+		return NoPos, fmt.Errorf("expected token %s (found %s)", t, e.Token)
+	}
+	return e.Pos, nil
+}
+
 func Parse(src string) ([]Node, error) {
 	t := &Tokenizer{}
 	sc := bufio.NewScanner(strings.NewReader(src))
@@ -149,17 +160,6 @@ func (p *parser) parseIdent() (*Ident, error) {
 	return &Ident{NamePos: e.Pos, Name: e.Text}, nil
 }
 
-func (p *parser) consumeToken(t Token) (Pos, error) {
-	e, err := p.ReadElem()
-	if err != nil {
-		return NoPos, err
-	}
-	if e.Token != t {
-		return NoPos, fmt.Errorf("expected token %s (found %s)", t, e.Token)
-	}
-	return e.Pos, nil
-}
-
 func (p *parser) parseMember() (*Member, error) {
 	key, err := p.parseString()
 	if err != nil {
@@ -252,29 +252,4 @@ func parseList[E Node](p *parser, delim Token, parseFn func() (E, error)) ([]E, 
 		out = append(out, v)
 	}
 	return out, nil
-}
-
-type tokenReader struct {
-	t  *Tokenizer
-	sc *bufio.Scanner
-}
-
-type tokenPos struct {
-	Text string
-	Token
-	Pos
-}
-
-func (r *tokenReader) Read(p []tokenPos) (n int, err error) {
-	for i := range p {
-		if !r.sc.Scan() {
-			if err := r.sc.Err(); err != nil {
-				return n, err
-			}
-			return n, io.EOF // The caller might change this to UnexpectedEOF.
-		}
-		p[i] = tokenPos{Text: r.sc.Text(), Token: r.t.Token(), Pos: r.t.Pos()}
-		n++
-	}
-	return n, nil
 }
