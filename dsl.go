@@ -46,11 +46,14 @@ type (
 		NamePos Pos
 		Name    string
 	}
-	Operator struct {
-		Op     *Ident
+	Invocation struct {
 		LParen Pos
 		Args   []Value
 		RParen Pos
+	}
+	Operator struct {
+		Id         *Ident
+		Invocation *Invocation
 	}
 )
 
@@ -106,14 +109,13 @@ func (a *Operator) Pos() Pos {
 	if a == nil {
 		return NoPos
 	}
-	return a.Op.Pos()
+	return a.Id.Pos()
 }
 
 func (*Null) val()     {}
 func (*Bool) val()     {}
 func (*Number) val()   {}
 func (*String) val()   {}
-func (*Ident) val()    {}
 func (*Array) val()    {}
 func (*Object) val()   {}
 func (*Operator) val() {}

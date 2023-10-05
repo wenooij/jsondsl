@@ -21,7 +21,7 @@ func TestDecodeEmptyArray(t *testing.T) {
 	if gotErr != wantErr {
 		t.Fatalf("TestParse(): got err = %v, want err = %v", err, wantErr)
 	}
-	if diff := cmp.Diff(got, want); diff != "" {
+	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("TestParse(): got diff:\n%s", diff)
 	}
 }
@@ -40,7 +40,7 @@ func TestDecodeEmptyObject(t *testing.T) {
 	if gotErr != wantErr {
 		t.Fatalf("TestParse(): got err = %v, want err = %v", err, wantErr)
 	}
-	if diff := cmp.Diff(got, want); diff != "" {
+	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("TestParse(): got diff:\n%s", diff)
 	}
 }
@@ -53,13 +53,13 @@ func TestDecodeOperator(t *testing.T) {
 	got, err := d.Decode()
 
 	wantErr := false
-	want := Op{Id: Id("op")}
+	want := Op{Id: "op", Inv: &Inv{}}
 
 	gotErr := err != nil
 	if gotErr != wantErr {
 		t.Fatalf("TestParse(): got err = %v, want err = %v", err, wantErr)
 	}
-	if diff := cmp.Diff(got, want); diff != "" {
+	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("TestParse(): got diff:\n%s", diff)
 	}
 }
@@ -94,12 +94,14 @@ func TestDecodeEverythingArray(t *testing.T) {
 		`"abc"`,
 		[]any(nil),
 		map[string]any(nil),
-		Id("id"),
+		Op{Id: "id"},
 		Op{
-			Id: Id("add"),
-			Args: []any{
-				float64(1),
-				float64(2),
+			Id: "add",
+			Inv: &Inv{
+				Args: []any{
+					float64(1),
+					float64(2),
+				},
 			},
 		},
 	}
@@ -108,7 +110,7 @@ func TestDecodeEverythingArray(t *testing.T) {
 	if gotErr != wantErr {
 		t.Fatalf("TestParse(): got err = %v, want err = %v", err, wantErr)
 	}
-	if diff := cmp.Diff(got, want); diff != "" {
+	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("TestParse(): got diff:\n%s", diff)
 	}
 }

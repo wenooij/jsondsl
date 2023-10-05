@@ -93,7 +93,7 @@ func (p *parser) parseValue() (Value, error) {
 		p.Discard(1)
 		return &Number{LitPos: e.Pos, Literal: e.Text}, nil
 	case TokenIdent:
-		v, err := p.parseOpOrIdent()
+		v, err := p.parseOperator()
 		if err != nil {
 			return nil, err
 		}
@@ -176,25 +176,26 @@ func (p *parser) parseMember() (*Member, error) {
 	return &Member{Key: key, Colon: colon, Value: value}, nil
 }
 
-func (p *parser) parseOpOrIdent() (Value, error) {
+func (p *parser) parseOperator() (Value, error) {
 	id, err := p.parseIdent()
 	if err != nil {
 		return nil, fmt.Errorf("%v at start of operator", err)
 	}
 	es, err := p.Peek(1)
-	if err != nil {
-		if err == io.EOF {
-			return id, nil
-		}
+	if err != nil && err != io.EOF {
 		return nil, err
 	}
-	if es[0].Token != TokenLParen {
-		return id, nil
+	var invocation *Invocation
+	if len(es) > 0 && es[0].Token == TokenLParen {
+		var err error
+		if invocation, err = p.parseInvocation(); err != nil {
+			return nil, err
+		}
 	}
-	return p.parseOperator(id)
+	return &Operator{Id: id, Invocation: invocation}, nil
 }
 
-func (p *parser) parseOperator(op *Ident) (*Operator, error) {
+func (p *parser) parseInvocation() (*Invocation, error) {
 	lp, err := p.consumeToken(TokenLParen)
 	if err != nil {
 		return nil, fmt.Errorf("%v at start of operator arguments", err)
@@ -207,7 +208,11 @@ func (p *parser) parseOperator(op *Ident) (*Operator, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%v at end of operator", err)
 	}
-	return &Operator{Op: op, LParen: lp, Args: args, RParen: rp}, nil
+	return &Invocation{
+		LParen: lp,
+		Args:   args,
+		RParen: rp,
+	}, nil
 }
 
 // parseList parses a generic list of Nodes as seen in the object, array, and operator specs.

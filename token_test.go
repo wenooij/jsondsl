@@ -91,7 +91,7 @@ func TestTokenize(t *testing.T) {
 		Pos:   19,
 	}}
 
-	if diff := cmp.Diff(got, want); diff != "" {
+	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("Tokenize(): got diff:\n%s", diff)
 	}
 }
