@@ -11,6 +11,7 @@ import (
 
 type Inv struct {
 	Args []any
+	Next *Inv
 }
 
 type Op struct {
@@ -224,7 +225,18 @@ func (d *Decoder) decodeInvocation() (*Inv, error) {
 	if _, err := d.consumeToken(TokenRParen); err != nil {
 		return nil, fmt.Errorf("%v at end of operator", err)
 	}
-	return &Inv{Args: args}, nil
+	nlp, err := d.Peek(1)
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+	var next *Inv
+	if len(nlp) > 0 && nlp[0].Token == TokenLParen {
+		next, err = d.decodeInvocation()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &Inv{Args: args, Next: next}, nil
 }
 
 // decodeList decodes a generic list of Nodes as seen in the object, array, and operator specs.

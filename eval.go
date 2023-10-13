@@ -4,61 +4,14 @@ import (
 	"fmt"
 )
 
-type Scope struct {
-	Parent *Scope
-	Vars   map[string]any
-}
-
-func (s *Scope) Reset(parent *Scope) {
-	s.Parent = parent
-	s.Vars = make(map[string]any)
-}
-
-func (s *Scope) Lookup(id string) (any, bool) {
-	if s == nil {
-		return nil, false
-	}
-	if v, ok := s.Vars[id]; ok {
-		return v, true
-	}
-	return s.Parent.Lookup(id)
-}
-
-func (s *Scope) LookupVar(id string) (any, bool) {
-	if v, ok := s.Lookup(id); ok {
-		if _, ok := v.(*OpSig); !ok {
-			return v, true
-		}
-	}
-	return nil, false
-}
-
-func (s *Scope) LookupOp(id string) (*OpSig, bool) {
-	if v, ok := s.Lookup(id); ok {
-		if sig, ok := v.(*OpSig); ok {
-			return sig, true
-		}
-	}
-	return nil, false
-}
-
-func (s *Scope) Bind(id string, val any) (oldVal any, overwrote bool) {
-	oldVal, overwrote = s.Vars[id]
-	s.Vars[id] = val
-	return oldVal, overwrote
-}
-
-type OpSig struct {
-	NArgs    int
-	Variadic bool
-	NReturns int
-	Func     OpFunc
-}
-
-type OpFunc func(args []any) (any, error)
+type OpFunc = func(scope *Scope, args []any) (any, error)
 
 type Evaluator struct {
 	scope *Scope
+}
+
+func Eval(scope *Scope, v any) (any, error) {
+	return (&Evaluator{scope}).Eval(v)
 }
 
 func (e *Evaluator) Init() {
@@ -90,40 +43,30 @@ func (e *Evaluator) evalOp(op Op) (any, error) {
 	if !ok {
 		return nil, fmt.Errorf("op is undefined: %v", op.Id)
 	}
-	opSig, ok := v.(*OpSig)
-	if !ok {
-		if op.Inv != nil {
-			return nil, fmt.Errorf("bad invocation on nonfunction variable")
+	switch v := v.(type) {
+	case OpFunc:
+		if op.Inv == nil {
+			return op, nil
 		}
-		v, err := e.Eval(v)
-		if err != nil {
-			return nil, fmt.Errorf("%v at var arg", err)
-		}
+		return e.evalInv(v, op.Inv)
+	default:
 		return v, nil
 	}
-	if op.Inv == nil {
-		return op, nil
-	}
-	if n := len(op.Inv.Args); n > opSig.NArgs {
-		return nil, fmt.Errorf("too many args for op %s (expected %d, found %d)", op.Id, opSig.NArgs, n)
-	}
-	args := make([]any, len(op.Inv.Args))
-	for i, a := range op.Inv.Args {
-		a, err := e.Eval(a)
-		if err != nil {
-			return nil, fmt.Errorf("%v at op arg", err)
-		}
-		args[i] = a
-	}
-	v, err := opSig.Func(args)
+}
+
+func (e *Evaluator) evalInv(opFn OpFunc, inv *Inv) (any, error) {
+	v, err := opFn(e.scope, inv.Args)
 	if err != nil {
 		return nil, err
 	}
-	if _, ok := v.(Op); !ok {
+	if inv.Next == nil {
 		return v, nil
 	}
-	op.Id = v.(Op).Id
-	return e.evalOp(op)
+	next, ok := v.(OpFunc)
+	if !ok {
+		return nil, fmt.Errorf("call of nonfunction type: %T", v)
+	}
+	return e.evalInv(next, inv.Next)
 }
 
 func (e *Evaluator) evalArray(a []any) ([]any, error) {

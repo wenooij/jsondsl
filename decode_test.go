@@ -77,6 +77,7 @@ func TestDecodeEverythingArray(t *testing.T) {
 		{},
 		id,
 		add(1,2),
+		lambda(x,x)(),
 	]`
 
 	d := &Decoder{}
@@ -102,6 +103,16 @@ func TestDecodeEverythingArray(t *testing.T) {
 					float64(1),
 					float64(2),
 				},
+			},
+		},
+		Op{
+			Id: "lambda",
+			Inv: &Inv{
+				Args: []any{
+					Op{Id: "x"},
+					Op{Id: "x"},
+				},
+				Next: &Inv{},
 			},
 		},
 	}

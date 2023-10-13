@@ -82,7 +82,7 @@ func (p *parser) parseValue() (Value, error) {
 		return array, nil
 	case TokenNull:
 		p.Discard(1)
-		return &Null{ValuePos: e.Pos}, nil
+		return &Null{TokenPos: e.Pos}, nil
 	case TokenFalse:
 		p.Discard(1)
 		return &Bool{ValuePos: e.Pos}, nil
@@ -192,7 +192,7 @@ func (p *parser) parseOperator() (Value, error) {
 			return nil, err
 		}
 	}
-	return &Operator{Id: id, Invocation: invocation}, nil
+	return &Operator{Id: id, Inv: invocation}, nil
 }
 
 func (p *parser) parseInvocation() (*Invocation, error) {
@@ -208,10 +208,24 @@ func (p *parser) parseInvocation() (*Invocation, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%v at end of operator", err)
 	}
+	nlp, err := p.Peek(1)
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+	var next *Invocation
+	if len(nlp) > 0 && nlp[0].Token == TokenLParen {
+		next, err = p.parseInvocation()
+		if err != nil {
+			return nil, err
+		}
+	}
 	return &Invocation{
-		LParen: lp,
-		Args:   args,
-		RParen: rp,
+		Arguments: &Arguments{
+			LParen: lp,
+			Args:   args,
+			RParen: rp,
+		},
+		Next: next,
 	}, nil
 }
 

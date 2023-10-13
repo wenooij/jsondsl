@@ -1,54 +1,49 @@
 package jsondsl
 
-import "math"
+import "fmt"
 
 // builtinOps lists builtin pure operations.
-var builtinOps = map[string]*OpSig{
-	"add":  {2, false, 1, add},
-	"div":  {2, false, 1, div},
-	"mean": {1, false, 1, mean},
-	"mul":  {2, false, 1, mul},
-	"sub":  {2, false, 1, sub},
-	"sum":  {0, true, 1, sum},
+var builtinOps = map[string]OpFunc{
+	"bind":   bind,
+	"lambda": lambda,
 }
 
-func add(args []any) (any, error) {
-	x, y := args[0], args[1]
-	return x.(float64) + y.(float64), nil
-}
-
-func div(args []any) (any, error) {
-	x, y := args[0], args[1]
-	return x.(float64) / y.(float64), nil
-}
-
-func mean(args []any) (any, error) {
-	vs := args[0].([]any)
-	if len(vs) == 0 {
-		return math.NaN(), nil
+func bind(scope *Scope, args []any) (any, error) {
+	if len(args) != 2 {
+		return nil, fmt.Errorf("bind expects 2 arguments: got %d", len(args))
 	}
-	var sum float64
-	for _, v := range vs {
-		sum += v.(float64)
+	k, ok := args[0].(Op)
+	if !ok || k.Inv != nil {
+		return nil, fmt.Errorf("not a valid variable in argument 0 of bind")
 	}
-	return sum / float64(len(vs)), nil
-}
-
-func mul(args []any) (any, error) {
-	x, y := args[0], args[1]
-	return x.(float64) * y.(float64), nil
-}
-
-func sub(args []any) (any, error) {
-	x, y := args[0], args[1]
-	return x.(float64) - y.(float64), nil
-}
-
-func sum(args []any) (any, error) {
-	vs := args[0].([]any)
-	var sum float64
-	for _, v := range vs {
-		sum += v.(float64)
+	v, err := Eval(scope, args[1])
+	if err != nil {
+		return nil, err
 	}
-	return sum, nil
+	scope.Bind(k.Id, v)
+	return nil, nil
+}
+
+func lambda(scope *Scope, args []any) (any, error) {
+	switch len(args) {
+	case 0:
+		return func(*Scope, []any) (any, error) { return nil, nil }, nil
+	case 1:
+		return func(*Scope, []any) (any, error) { return args[0], nil }, nil
+	default:
+		return func(scope *Scope, as []any) (any, error) {
+			if len(as) != len(args)-1 {
+				return nil, fmt.Errorf("lambda expects %d argument, found %d", len(args)-1, len(as))
+			}
+			scope = scope.LocalScope()
+			for i, a := range args[:len(args)-1] {
+				v, ok := a.(Op)
+				if !ok || v.Inv != nil {
+					return nil, fmt.Errorf("not a valid variable in argument %d of lambda", i+1)
+				}
+				scope.Bind(v.Id, as[i])
+			}
+			return Eval(scope, args[len(args)-1])
+		}, nil
+	}
 }

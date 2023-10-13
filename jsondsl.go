@@ -14,7 +14,7 @@ type Value interface {
 }
 
 type (
-	Null struct{ ValuePos Pos }
+	Null struct{ TokenPos Pos }
 	Bool struct {
 		ValuePos Pos
 		Value    bool
@@ -47,13 +47,17 @@ type (
 		Name    string
 	}
 	Invocation struct {
+		*Arguments
+		Next *Invocation
+	}
+	Arguments struct {
 		LParen Pos
 		Args   []Value
 		RParen Pos
 	}
 	Operator struct {
-		Id         *Ident
-		Invocation *Invocation
+		Id  *Ident
+		Inv *Invocation
 	}
 )
 
@@ -61,7 +65,7 @@ func (a *Null) Pos() Pos {
 	if a == nil {
 		return NoPos
 	}
-	return a.ValuePos
+	return a.TokenPos
 }
 func (a *Bool) Pos() Pos {
 	if a == nil {

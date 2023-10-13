@@ -47,8 +47,8 @@ func TestParseOperator(t *testing.T) {
 
 	wantErr := false
 	want := []Node{&Operator{
-		Id:         &Ident{NamePos: 0, Name: "op"},
-		Invocation: &Invocation{LParen: 2, RParen: 3},
+		Id:  &Ident{NamePos: 0, Name: "op"},
+		Inv: &Invocation{Arguments: &Arguments{LParen: 2, RParen: 3}},
 	}}
 
 	gotErr := err != nil
@@ -73,6 +73,7 @@ func TestParseEverythingArray(t *testing.T) {
 		{},
 		id,
 		add(1,2),
+		lambda(x,x)(),
 	]`
 
 	got, err := Parse(input)
@@ -80,7 +81,7 @@ func TestParseEverythingArray(t *testing.T) {
 	wantErr := false
 	want := []Node{&Array{
 		Elements: []Value{
-			&Null{ValuePos: 4},
+			&Null{TokenPos: 4},
 			&Bool{ValuePos: 12},
 			&Bool{ValuePos: 21, Value: true},
 			&Number{LitPos: 29, Literal: "0"},
@@ -92,17 +93,38 @@ func TestParseEverythingArray(t *testing.T) {
 			&Operator{Id: &Ident{NamePos: 76, Name: "id"}},
 			&Operator{
 				Id: &Ident{NamePos: 82, Name: "add"},
-				Invocation: &Invocation{
-					LParen: 85,
-					Args: []Value{
-						&Number{LitPos: 86, Literal: "1"},
-						&Number{LitPos: 88, Literal: "2"},
+				Inv: &Invocation{
+					Arguments: &Arguments{
+						LParen: 85,
+						Args: []Value{
+							&Number{LitPos: 86, Literal: "1"},
+							&Number{LitPos: 88, Literal: "2"},
+						},
+						RParen: 89,
 					},
-					RParen: 89,
+				},
+			},
+			&Operator{
+				Id: &Ident{NamePos: 94, Name: "lambda"},
+				Inv: &Invocation{
+					Arguments: &Arguments{
+						LParen: 100,
+						Args: []Value{
+							&Operator{Id: &Ident{NamePos: 101, Name: "x"}},
+							&Operator{Id: &Ident{NamePos: 103, Name: "x"}},
+						},
+						RParen: 104,
+					},
+					Next: &Invocation{
+						Arguments: &Arguments{
+							LParen: 105,
+							RParen: 106,
+						},
+					},
 				},
 			},
 		},
-		RBrack: 93,
+		RBrack: 110,
 	}}
 
 	gotErr := err != nil
