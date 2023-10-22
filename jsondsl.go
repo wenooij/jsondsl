@@ -14,10 +14,10 @@ type Value interface {
 }
 
 type (
-	Null struct{ TokenPos Pos }
+	Null struct{ NullPos Pos }
 	Bool struct {
-		ValuePos Pos
-		Value    bool
+		LitPos  Pos
+		Literal bool
 	}
 	Number struct {
 		LitPos  Pos
@@ -29,16 +29,16 @@ type (
 	}
 	Array struct {
 		LBrack   Pos
-		Elements []Value
+		Elements []ListElem[Value]
 		RBrack   Pos
 	}
 	Object struct {
 		LBrace  Pos
-		Members []*Member
+		Members []ListElem[*Member]
 		RBrace  Pos
 	}
 	Member struct {
-		Key   *String
+		Key   Value // Key excluding *Array and *Object.
 		Colon Pos
 		Value Value
 	}
@@ -46,18 +46,18 @@ type (
 		NamePos Pos
 		Name    string
 	}
-	Invocation struct {
-		*Arguments
-		Next *Invocation
-	}
-	Arguments struct {
-		LParen Pos
-		Args   []Value
-		RParen Pos
-	}
 	Operator struct {
-		Id  *Ident
-		Inv *Invocation
+		Id   *Ident
+		Args []*OperatorArgs
+	}
+	OperatorArgs struct {
+		LParen    Pos
+		ValueList []ListElem[Value]
+		RParen    Pos
+	}
+	ListElem[E Node] struct {
+		Value E
+		Comma Pos // CommaPos denotes the trailing comma, if any.
 	}
 )
 
@@ -65,13 +65,13 @@ func (a *Null) Pos() Pos {
 	if a == nil {
 		return NoPos
 	}
-	return a.TokenPos
+	return a.NullPos
 }
 func (a *Bool) Pos() Pos {
 	if a == nil {
 		return NoPos
 	}
-	return a.ValuePos
+	return a.LitPos
 }
 func (a *Number) Pos() Pos {
 	if a == nil {

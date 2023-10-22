@@ -34,7 +34,7 @@ func TestDecodeEmptyObject(t *testing.T) {
 	got, err := d.Decode()
 
 	wantErr := false
-	want := map[string]any(nil)
+	want := map[any]any(nil)
 
 	gotErr := err != nil
 	if gotErr != wantErr {
@@ -53,7 +53,7 @@ func TestDecodeOperator(t *testing.T) {
 	got, err := d.Decode()
 
 	wantErr := false
-	want := Op{Id: "op", Inv: &Inv{}}
+	want := &Op{Id: "op", Args: [][]any{nil}}
 
 	gotErr := err != nil
 	if gotErr != wantErr {
@@ -94,25 +94,25 @@ func TestDecodeEverythingArray(t *testing.T) {
 		-1e+75,
 		`"abc"`,
 		[]any(nil),
-		map[string]any(nil),
-		Op{Id: "id"},
-		Op{
+		map[any]any(nil),
+		&Op{Id: "id"},
+		&Op{
 			Id: "add",
-			Inv: &Inv{
-				Args: []any{
+			Args: [][]any{
+				{
 					float64(1),
 					float64(2),
 				},
 			},
 		},
-		Op{
+		&Op{
 			Id: "lambda",
-			Inv: &Inv{
-				Args: []any{
-					Op{Id: "x"},
-					Op{Id: "x"},
+			Args: [][]any{
+				{
+					&Op{Id: "x"},
+					&Op{Id: "x"},
 				},
-				Next: &Inv{},
+				nil,
 			},
 		},
 	}

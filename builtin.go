@@ -1,6 +1,9 @@
 package jsondsl
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 // builtinOps lists builtin pure operations.
 var builtinOps = map[string]OpFunc{
@@ -12,15 +15,28 @@ func bind(scope *Scope, args []any) (any, error) {
 	if len(args) != 2 {
 		return nil, fmt.Errorf("bind expects 2 arguments: got %d", len(args))
 	}
-	k, ok := args[0].(Op)
-	if !ok || k.Inv != nil {
-		return nil, fmt.Errorf("not a valid variable in argument 0 of bind")
+	var name string
+	switch k := args[0].(type) {
+	case *Op:
+		if len(k.Args) != 0 {
+			return nil, fmt.Errorf("not a valid name in arg 0 of bind: arg must be id or string")
+		}
+		name = k.Id
+	case *String:
+		// TODO(wes): Test contents for id conformity.
+		var err error
+		name, err = strconv.Unquote(k.QuotedContent)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unquote arg 0 of bind: %v", err)
+		}
+	default:
+		return nil, fmt.Errorf("not a valid name in arg 0 of bind: invalid type %T", k)
 	}
 	v, err := Eval(scope, args[1])
 	if err != nil {
 		return nil, err
 	}
-	scope.Bind(k.Id, v)
+	scope.Bind(name, v)
 	return nil, nil
 }
 
@@ -37,8 +53,8 @@ func lambda(scope *Scope, args []any) (any, error) {
 			}
 			scope = scope.LocalScope()
 			for i, a := range args[:len(args)-1] {
-				v, ok := a.(Op)
-				if !ok || v.Inv != nil {
+				v, ok := a.(*Op)
+				if !ok || len(v.Args) != 0 {
 					return nil, fmt.Errorf("not a valid variable in argument %d of lambda", i+1)
 				}
 				scope.Bind(v.Id, as[i])

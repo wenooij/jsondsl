@@ -9,14 +9,9 @@ import (
 	"github.com/wenooij/bufiog"
 )
 
-type Inv struct {
-	Args []any
-	Next *Inv
-}
-
 type Op struct {
-	Id  string
-	Inv *Inv
+	Id   string
+	Args [][]any
 }
 
 type Decoder struct {
@@ -44,10 +39,15 @@ func (d *Decoder) consumeToken(t Token) (Pos, error) {
 	return e.Pos, nil
 }
 
+// Decode a value but returns EOF if no value exists.
 func (d *Decoder) Decode() (any, error) {
+	if _, err := d.Peek(1); err == io.EOF {
+		return nil, io.EOF
+	}
 	return d.decodeValue()
 }
 
+// decodeOptValue deocdes a value otherwise returns UnexpectedEOF.
 func (d *Decoder) decodeValue() (any, error) {
 	es, err := d.Peek(1)
 	if err != nil {
@@ -127,14 +127,14 @@ func (d *Decoder) decodeArray() ([]any, error) {
 	return elems, nil
 }
 
-func (d *Decoder) decodeObject() (map[string]any, error) {
+func (d *Decoder) decodeObject() (map[any]any, error) {
 	if _, err := d.consumeToken(TokenLBrace); err != nil {
 		return nil, fmt.Errorf("%v at beginning of object", err)
 	}
-	var dst map[string]any
+	var dst map[any]any
 	if err := decodeList(d, TokenRBrace, func() error {
 		if dst == nil {
-			dst = make(map[string]any)
+			dst = make(map[any]any)
 		}
 		return d.decodeMember(dst)
 	}); err != nil {
@@ -172,8 +172,8 @@ func (d *Decoder) decodeId() (string, error) {
 	return e.Text, nil
 }
 
-func (d *Decoder) decodeMember(dst map[string]any) error {
-	key, err := d.decodeString()
+func (d *Decoder) decodeMember(dst map[any]any) error {
+	key, err := d.decodeValue()
 	if err != nil {
 		return fmt.Errorf("%v at member key", err)
 	}
@@ -188,26 +188,30 @@ func (d *Decoder) decodeMember(dst map[string]any) error {
 	return nil
 }
 
-func (d *Decoder) decodeOperator() (any, error) {
+func (d *Decoder) decodeOperator() (*Op, error) {
 	id, err := d.decodeId()
 	if err != nil {
 		return nil, fmt.Errorf("%v at start of operator", err)
 	}
-	es, err := d.Peek(1)
-	if err != nil && err != io.EOF {
-		return nil, err
-	}
-	var opInv *Inv
-	if len(es) > 0 && es[0].Token == TokenLParen {
-		var err error
-		if opInv, err = d.decodeInvocation(); err != nil {
+	var opArgs [][]any
+	for {
+		es, err := d.Peek(1)
+		if err != nil && err != io.EOF {
 			return nil, err
 		}
+		var args []any
+		if len(es) == 0 || es[0].Token != TokenLParen {
+			break
+		}
+		if args, err = d.decodeOperatorArgs(); err != nil {
+			return nil, err
+		}
+		opArgs = append(opArgs, args)
 	}
-	return Op{Id: id, Inv: opInv}, nil
+	return &Op{Id: id, Args: opArgs}, nil
 }
 
-func (d *Decoder) decodeInvocation() (*Inv, error) {
+func (d *Decoder) decodeOperatorArgs() ([]any, error) {
 	if _, err := d.consumeToken(TokenLParen); err != nil {
 		return nil, fmt.Errorf("%v at start of operator arguments", err)
 	}
@@ -225,18 +229,7 @@ func (d *Decoder) decodeInvocation() (*Inv, error) {
 	if _, err := d.consumeToken(TokenRParen); err != nil {
 		return nil, fmt.Errorf("%v at end of operator", err)
 	}
-	nlp, err := d.Peek(1)
-	if err != nil && err != io.EOF {
-		return nil, err
-	}
-	var next *Inv
-	if len(nlp) > 0 && nlp[0].Token == TokenLParen {
-		next, err = d.decodeInvocation()
-		if err != nil {
-			return nil, err
-		}
-	}
-	return &Inv{Args: args, Next: next}, nil
+	return args, nil
 }
 
 // decodeList decodes a generic list of Nodes as seen in the object, array, and operator specs.

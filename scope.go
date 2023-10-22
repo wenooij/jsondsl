@@ -1,12 +1,18 @@
 package jsondsl
 
+import "fmt"
+
 type Scope struct {
 	Parent *Scope
 	Vars   map[string]any
 }
 
-func GlobalScope() *Scope {
-	return &Scope{Vars: make(map[string]any)}
+func BuiltinScope() *Scope {
+	s := &Scope{Vars: make(map[string]any, len(builtinOps))}
+	for id, op := range builtinOps {
+		s.Bind(id, op)
+	}
+	return s
 }
 
 func (s *Scope) Reset(parent *Scope) {
@@ -14,23 +20,14 @@ func (s *Scope) Reset(parent *Scope) {
 	s.Vars = make(map[string]any)
 }
 
-func (s *Scope) Lookup(id string) (any, bool) {
-	if s == nil {
-		return nil, false
-	}
-	if v, ok := s.Vars[id]; ok {
-		return v, true
-	}
-	return s.Parent.Lookup(id)
-}
-
-func (s *Scope) LookupOp(id string) (OpFunc, bool) {
-	if v, ok := s.Lookup(id); ok {
-		if sig, ok := v.(OpFunc); ok {
-			return sig, true
+func (s *Scope) Lookup(id string) (any, error) {
+	for s != nil {
+		if v, ok := s.Vars[id]; ok {
+			return v, nil
 		}
+		s = s.Parent
 	}
-	return nil, false
+	return nil, fmt.Errorf("name %q not found", id)
 }
 
 func (s *Scope) Bind(id string, val any) (oldVal any, overwrote bool) {

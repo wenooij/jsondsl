@@ -15,6 +15,7 @@ const (
 	TokenInvalid Token = iota //
 	TokenColon                // :
 	TokenComma                // ,
+	TokenDot                  // .
 	TokenLParen               // (
 	TokenRParen               // )
 	TokenLBrace               // {
@@ -32,6 +33,7 @@ const (
 var byteToken = map[byte]Token{
 	':': TokenColon,
 	',': TokenComma,
+	'.': TokenDot,
 	'{': TokenLBrace,
 	'[': TokenLBrack,
 	'(': TokenLParen,

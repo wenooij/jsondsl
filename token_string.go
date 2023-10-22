@@ -11,23 +11,24 @@ func _() {
 	_ = x[TokenInvalid-0]
 	_ = x[TokenColon-1]
 	_ = x[TokenComma-2]
-	_ = x[TokenLParen-3]
-	_ = x[TokenRParen-4]
-	_ = x[TokenLBrace-5]
-	_ = x[TokenRBrace-6]
-	_ = x[TokenLBrack-7]
-	_ = x[TokenRBrack-8]
-	_ = x[TokenNull-9]
-	_ = x[TokenFalse-10]
-	_ = x[TokenTrue-11]
-	_ = x[TokenNumber-12]
-	_ = x[TokenIdent-13]
-	_ = x[TokenString-14]
+	_ = x[TokenDot-3]
+	_ = x[TokenLParen-4]
+	_ = x[TokenRParen-5]
+	_ = x[TokenLBrace-6]
+	_ = x[TokenRBrace-7]
+	_ = x[TokenLBrack-8]
+	_ = x[TokenRBrack-9]
+	_ = x[TokenNull-10]
+	_ = x[TokenFalse-11]
+	_ = x[TokenTrue-12]
+	_ = x[TokenNumber-13]
+	_ = x[TokenIdent-14]
+	_ = x[TokenString-15]
 }
 
-const _Token_name = "InvalidColonCommaLParenRParenLBraceRBraceLBrackRBrackNullFalseTrueNumberIdentString"
+const _Token_name = "InvalidColonCommaDotLParenRParenLBraceRBraceLBrackRBrackNullFalseTrueNumberIdentString"
 
-var _Token_index = [...]uint8{0, 7, 12, 17, 23, 29, 35, 41, 47, 53, 57, 62, 66, 72, 77, 83}
+var _Token_index = [...]uint8{0, 7, 12, 17, 20, 26, 32, 38, 44, 50, 56, 60, 65, 69, 75, 80, 86}
 
 func (i Token) String() string {
 	if i < 0 || i >= Token(len(_Token_index)-1) {

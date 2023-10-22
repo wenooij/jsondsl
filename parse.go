@@ -82,13 +82,13 @@ func (p *parser) parseValue() (Value, error) {
 		return array, nil
 	case TokenNull:
 		p.Discard(1)
-		return &Null{TokenPos: e.Pos}, nil
+		return &Null{NullPos: e.Pos}, nil
 	case TokenFalse:
 		p.Discard(1)
-		return &Bool{ValuePos: e.Pos}, nil
+		return &Bool{LitPos: e.Pos}, nil
 	case TokenTrue:
 		p.Discard(1)
-		return &Bool{ValuePos: e.Pos, Value: true}, nil
+		return &Bool{LitPos: e.Pos, Literal: true}, nil
 	case TokenNumber:
 		p.Discard(1)
 		return &Number{LitPos: e.Pos, Literal: e.Text}, nil
@@ -99,8 +99,7 @@ func (p *parser) parseValue() (Value, error) {
 		}
 		return v, nil
 	case TokenString:
-		p.Discard(1)
-		return &String{Quote: e.Pos, QuotedContent: e.Text}, nil
+		return p.parseString()
 	default:
 		return nil, fmt.Errorf("unknown token %s returned during scan", e.Token)
 	}
@@ -161,7 +160,7 @@ func (p *parser) parseIdent() (*Ident, error) {
 }
 
 func (p *parser) parseMember() (*Member, error) {
-	key, err := p.parseString()
+	key, err := p.parseValue()
 	if err != nil {
 		return nil, fmt.Errorf("%v at member key", err)
 	}
@@ -181,21 +180,25 @@ func (p *parser) parseOperator() (Value, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%v at start of operator", err)
 	}
-	es, err := p.Peek(1)
-	if err != nil && err != io.EOF {
-		return nil, err
-	}
-	var invocation *Invocation
-	if len(es) > 0 && es[0].Token == TokenLParen {
-		var err error
-		if invocation, err = p.parseInvocation(); err != nil {
+	var opArgs []*OperatorArgs
+	for {
+		es, err := p.Peek(1)
+		if err != nil && err != io.EOF {
 			return nil, err
 		}
+		var args *OperatorArgs
+		if len(es) == 0 || es[0].Token != TokenLParen {
+			break
+		}
+		if args, err = p.parseOperatorArgs(); err != nil {
+			return nil, err
+		}
+		opArgs = append(opArgs, args)
 	}
-	return &Operator{Id: id, Inv: invocation}, nil
+	return &Operator{Id: id, Args: opArgs}, nil
 }
 
-func (p *parser) parseInvocation() (*Invocation, error) {
+func (p *parser) parseOperatorArgs() (*OperatorArgs, error) {
 	lp, err := p.consumeToken(TokenLParen)
 	if err != nil {
 		return nil, fmt.Errorf("%v at start of operator arguments", err)
@@ -208,24 +211,10 @@ func (p *parser) parseInvocation() (*Invocation, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%v at end of operator", err)
 	}
-	nlp, err := p.Peek(1)
-	if err != nil && err != io.EOF {
-		return nil, err
-	}
-	var next *Invocation
-	if len(nlp) > 0 && nlp[0].Token == TokenLParen {
-		next, err = p.parseInvocation()
-		if err != nil {
-			return nil, err
-		}
-	}
-	return &Invocation{
-		Arguments: &Arguments{
-			LParen: lp,
-			Args:   args,
-			RParen: rp,
-		},
-		Next: next,
+	return &OperatorArgs{
+		LParen:    lp,
+		ValueList: args,
+		RParen:    rp,
 	}, nil
 }
 
@@ -234,10 +223,10 @@ func (p *parser) parseInvocation() (*Invocation, error) {
 // delim.
 //
 // precondition: delim is one of: TokenRBrack, TokenBrace, or TokenRParen.
-func parseList[E Node](p *parser, delim Token, parseFn func() (E, error)) ([]E, error) {
-	out := []E(nil)
+func parseList[E Node](p *parser, delim Token, parseFn func() (E, error)) ([]ListElem[E], error) {
+	out := []ListElem[E](nil)
 
-	for first := true; ; first = false {
+	for done := false; !done; {
 		es, err := p.Peek(1)
 		if err != nil {
 			if err == io.EOF {
@@ -248,27 +237,28 @@ func parseList[E Node](p *parser, delim Token, parseFn func() (E, error)) ([]E, 
 		if es[0].Token == delim {
 			break
 		}
-		if !first {
-			if es[0].Token != TokenComma {
-				return nil, fmt.Errorf("expected token %s (found %s)", TokenComma, es[0].Token)
-			}
-			p.Discard(1)
-			es, err = p.Peek(1)
-			if err != nil {
-				if err == io.EOF {
-					return nil, io.ErrUnexpectedEOF
-				}
-				return nil, err
-			}
-		}
-		if es[0].Token == delim {
-			break
-		}
 		v, err := parseFn()
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, v)
+		es, err = p.Peek(1)
+		if err != nil {
+			if err == io.EOF {
+				return nil, io.ErrUnexpectedEOF
+			}
+			return nil, err
+		}
+		var comma Pos
+		switch es[0].Token {
+		case TokenComma:
+			comma = es[0].Pos
+			p.Discard(1)
+		case delim:
+			done = true
+		default:
+			return nil, fmt.Errorf("expected token %s (found %s)", TokenComma, es[0].Token)
+		}
+		out = append(out, ListElem[E]{Value: v, Comma: comma})
 	}
 	return out, nil
 }
