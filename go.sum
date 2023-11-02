@@ -1,4 +1,6 @@
 github.com/google/go-cmp v0.5.9 h1:O2Tfq5qg4qc4AmwVlvv0oLiVAGB7enBSJ2x2DqQFi38=
 github.com/google/go-cmp v0.5.9/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
+github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
+github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
 github.com/wenooij/bufiog v0.0.0-20231002012054-9aaa03828ee8 h1:MeS9q54+B3+rIE548L7sPXwQ2LCNwHR0Cc0Q/FruSOE=
 github.com/wenooij/bufiog v0.0.0-20231002012054-9aaa03828ee8/go.mod h1:6sJfnIG4+ul/JlriYvy5glmwAu9ajyfk8sgMdS6EhoM=

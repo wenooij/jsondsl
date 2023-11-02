@@ -42,6 +42,18 @@ var byteToken = map[byte]Token{
 	')': TokenRParen,
 }
 
+var tokenStr = map[Token]string{
+	TokenColon:  ":",
+	TokenComma:  ",",
+	TokenDot:    ".",
+	TokenLBrace: "{",
+	TokenLBrack: "[",
+	TokenLParen: "(",
+	TokenRBrace: "}",
+	TokenRBrack: "]",
+	TokenRParen: ")",
+}
+
 type Tokenizer struct {
 	advance   int
 	lastPos   Pos
